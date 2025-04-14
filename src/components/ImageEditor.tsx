@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Download } from 'lucide-react';
+import { Download, Eye } from 'lucide-react';
 
 interface ImageEditorProps {
   imageUrl: string | null;
@@ -15,6 +15,7 @@ interface ImageEditorProps {
 const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
+  const [isPreviewVisible, setIsPreviewVisible] = useState<boolean>(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const { toast } = useToast();
@@ -107,6 +108,10 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
     });
   };
 
+  const togglePreview = () => {
+    setIsPreviewVisible(!isPreviewVisible);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {imageUrl ? (
@@ -134,28 +139,41 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
               />
             </div>
             
-            <Button 
-              onClick={handleDownload} 
-              className="w-full bg-brand hover:bg-brand-dark"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Baixar Imagem
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button 
+                onClick={handleDownload} 
+                className="w-full bg-brand hover:bg-brand-dark"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Baixar Imagem
+              </Button>
+              
+              <Button 
+                onClick={togglePreview}
+                variant="outline"
+                className="w-full"
+              >
+                <Eye className="mr-2 h-4 w-4" />
+                {isPreviewVisible ? "Ocultar Prévia" : "Mostrar Prévia"}
+              </Button>
+            </div>
           </div>
           
-          <div className="mt-6">
-            <h3 className="text-lg font-medium mb-3">Pré-visualização</h3>
-            <Card>
-              <CardContent className="p-2 flex justify-center">
-                <div className="relative max-h-[500px] overflow-hidden">
-                  <canvas 
-                    ref={canvasRef} 
-                    className="max-w-full h-auto rounded-md shadow-lg"
-                  ></canvas>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {isPreviewVisible && (
+            <div className="mt-6">
+              <h3 className="text-lg font-medium mb-3">Pré-visualização</h3>
+              <Card>
+                <CardContent className="p-2 flex justify-center">
+                  <div className="relative max-h-[500px] overflow-hidden">
+                    <canvas 
+                      ref={canvasRef} 
+                      className="max-w-full h-auto rounded-md shadow-lg"
+                    ></canvas>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </>
       ) : (
         <div className="text-center p-10 text-gray-500">
