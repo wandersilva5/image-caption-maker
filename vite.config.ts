@@ -17,6 +17,25 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@/hooks": path.resolve(__dirname, "./src/hooks"), // Alias para hooks
+      "@/utils": path.resolve(__dirname, "./src/utils"), // Alias para utils
     },
   },
+  build: {
+    target: 'esnext', // Define o alvo para navegadores modernos
+    minify: 'esbuild', // Usa esbuild para minificação rápida
+    sourcemap: false, // Desativa sourcemaps em produção para reduzir o tamanho
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Divisão de código para bibliotecas externas
+          react: ['react', 'react-dom'],
+          radix: ['@radix-ui/react-*'],
+          lucide: ['lucide-react'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 500, // Aumenta o limite de aviso para chunks grandes
+  },
+  cacheDir: './node_modules/.vite', // Configuração de cache para builds mais rápidas
 }));

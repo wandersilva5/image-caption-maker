@@ -49,6 +49,13 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --background-light: #ffffff;
+    --background-dark: #1a1a1a;
+    --text-light: #000000;
+    --text-dark: #ffffff;
+    --card-light: #f9f9f9;
+    --card-dark: #2a2a2a;
   }
 
   .dark {
@@ -97,5 +104,49 @@
 
   body {
     @apply bg-background text-foreground;
+    background-color: var(--background-light);
+    color: var(--text-light);
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
+
+  body.dark {
+    background-color: var(--background-dark);
+    color: var(--text-dark);
+  }
+
+  main, header {
+    background-color: var(--background-light);
+    transition: background-color 0.3s ease;
+  }
+
+  body.dark main, body.dark header {
+    background-color: var(--background-dark);
+  }
+
+  .card {
+    background-color: var(--card-light);
+    transition: background-color 0.3s ease;
+  }
+
+  body.dark .card {
+    background-color: var(--card-dark);
+  }
+}
+
+/* Animações suaves */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-in-out;
+}
+
+.transition-opacity {
+  transition: opacity 0.5s ease-in-out;
 }
