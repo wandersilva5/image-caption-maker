@@ -300,26 +300,8 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
             <canvas
               ref={canvasRef}
               className="w-full h-auto rounded-lg shadow-md cursor-pointer"
-              onClick={handleModalOpen}
             />
-            
-            {previewOnly && (
-              <p className="text-sm text-gray-500 mt-2 text-center">
-                Clique na imagem para ampliar
-              </p>
-            )}
           </div>
-
-          {/* Modal de visualização em tamanho maior */}
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogContent className="max-w-[90vw] max-h-[90vh] p-6">
-              <canvas
-                ref={modalCanvasRef}
-                className="max-w-full max-h-[80vh] h-auto rounded-lg mx-auto"
-              />
-            </DialogContent>
-          </Dialog>
-
           {/* Controles de edição */}
           {showControls && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
