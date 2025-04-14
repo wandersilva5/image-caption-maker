@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -228,10 +227,10 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
   const updateCurrentFormat = activeTab === 'title' ? updateTitleFormat : updateDescFormat;
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-3 animate-fade-in">
       {imageUrl ? (
         <>
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor="title">Título</Label>
               <Input
@@ -250,19 +249,19 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Adicione uma descrição"
-                className="w-full min-h-[100px]"
+                className="w-full min-h-[80px]"
               />
             </div>
             
-            <Card className="mt-4">
-              <CardContent className="p-4">
+            <Card className="mt-3">
+              <CardContent className="p-3">
                 <Tabs defaultValue="title" onValueChange={setActiveTab}>
-                  <TabsList className="w-full mb-4">
+                  <TabsList className="w-full mb-3">
                     <TabsTrigger value="title" className="flex-1">Formatar Título</TabsTrigger>
                     <TabsTrigger value="description" className="flex-1">Formatar Descrição</TabsTrigger>
                   </TabsList>
                   
-                  <TabsContent value="title" className="space-y-4">
+                  <TabsContent value="title" className="space-y-3">
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <Label>Tamanho da fonte</Label>
@@ -278,8 +277,8 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
                       />
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
                         <Label>Cor do texto</Label>
                         <div className="flex items-center gap-2">
                           <div
@@ -294,7 +293,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
                         </div>
                       </div>
                       
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <div className="flex items-center justify-between">
                           <Label>Sombra</Label>
                           <Input
@@ -321,7 +320,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
                       </div>
                     </div>
                     
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       <Label>Alinhamento</Label>
                       <ToggleGroup
                         type="single"
@@ -367,7 +366,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
                     </div>
                     
                     {titleFormat.shadowEnabled && (
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <div className="flex justify-between items-center">
                           <Label>Intensidade da sombra</Label>
                           <span className="text-sm text-gray-500">{titleFormat.shadowBlur}px</span>
@@ -385,7 +384,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
                     )}
                   </TabsContent>
                   
-                  <TabsContent value="description" className="space-y-4">
+                  <TabsContent value="description" className="space-y-3">
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <Label>Tamanho da fonte</Label>
@@ -401,8 +400,8 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
                       />
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
                         <Label>Cor do texto</Label>
                         <div className="flex items-center gap-2">
                           <div
@@ -417,7 +416,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
                         </div>
                       </div>
                       
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <div className="flex items-center justify-between">
                           <Label>Sombra</Label>
                           <Input
@@ -444,7 +443,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
                       </div>
                     </div>
                     
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       <Label>Alinhamento</Label>
                       <ToggleGroup
                         type="single"
@@ -490,7 +489,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
                     </div>
                     
                     {descFormat.shadowEnabled && (
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <div className="flex justify-between items-center">
                           <Label>Intensidade da sombra</Label>
                           <span className="text-sm text-gray-500">{descFormat.shadowBlur}px</span>
@@ -511,10 +510,10 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
               </CardContent>
             </Card>
             
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex gap-2 mt-3">
               <Button 
                 onClick={handleDownload} 
-                className="w-full bg-brand hover:bg-brand-dark"
+                className="flex-1 bg-brand hover:bg-brand-dark"
               >
                 <Download className="mr-2 h-4 w-4" />
                 Baixar Imagem
@@ -523,7 +522,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
               <Button 
                 onClick={togglePreview}
                 variant="outline"
-                className="w-full"
+                className="w-auto"
               >
                 <Eye className="mr-2 h-4 w-4" />
                 {isPreviewVisible ? "Ocultar Prévia" : "Mostrar Prévia"}
@@ -532,23 +531,22 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
           </div>
           
           {isPreviewVisible && (
-            <div className="mt-6">
-              <h3 className="text-lg font-medium mb-3">Pré-visualização</h3>
-              <Card>
-                <CardContent className="p-2 flex justify-center">
-                  <div className="relative max-h-[500px] overflow-hidden">
-                    <canvas 
-                      ref={canvasRef} 
-                      className="max-w-full h-auto rounded-md shadow-lg"
-                    ></canvas>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="mt-4">
+              <h3 className="text-md font-medium mb-2">Pré-visualização</h3>
+              <div className="border rounded-md p-2 flex justify-center bg-gray-50">
+                <div className="relative max-w-full">
+                  <canvas 
+                    ref={canvasRef} 
+                    className="max-w-full h-auto rounded-md shadow-md"
+                    style={{ maxHeight: "250px" }}
+                  ></canvas>
+                </div>
+              </div>
             </div>
           )}
         </>
       ) : (
-        <div className="text-center p-10 text-gray-500">
+        <div className="text-center p-6 text-gray-500">
           Selecione uma imagem para começar a editar
         </div>
       )}

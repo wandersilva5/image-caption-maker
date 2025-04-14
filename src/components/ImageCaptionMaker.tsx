@@ -12,8 +12,8 @@ const ImageCaptionMaker: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto py-4 px-4 h-full">
-      <Card className="shadow-lg border-gray-200 h-full">
+    <div className="container mx-auto px-4 py-4">
+      <Card className="shadow-lg border-gray-200">
         <CardHeader className="py-4">
           <CardTitle className="text-xl text-center text-brand">Criador de Legendas para Imagens</CardTitle>
           <CardDescription className="text-center text-sm">
@@ -21,18 +21,16 @@ const ImageCaptionMaker: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
-            <div className="space-y-2">
-              <h2 className="text-md font-medium">1. Selecione uma imagem</h2>
-              <div className="h-[180px]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <h2 className="text-md font-medium mb-2">1. Selecione uma imagem</h2>
+              <div className="h-[180px] mb-4">
                 <ImageUploader onImageSelected={handleImageSelected} />
               </div>
             </div>
-            <div className="space-y-2">
-              <h2 className="text-md font-medium">2. Personalize sua imagem</h2>
-              <div className="h-[calc(100vh-350px)] min-h-[300px]">
-                <ImageEditor imageUrl={imageUrl} />
-              </div>
+            <div>
+              <h2 className="text-md font-medium mb-2">2. Personalize sua imagem</h2>
+              <ImageEditor imageUrl={imageUrl} />
             </div>
           </div>
         </CardContent>
