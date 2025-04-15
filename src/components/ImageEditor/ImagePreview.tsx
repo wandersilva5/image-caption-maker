@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { renderCanvas } from './CanvasRenderer';
 import { TextFormatOptions, ImageFilters } from './types';
@@ -13,6 +13,7 @@ interface ImagePreviewProps {
   isModalOpen: boolean;
   setIsModalOpen: (isOpen: boolean) => void;
   previewOnly?: boolean;
+  maxPreviewWidth?: number; // Maximum width for the preview
 }
 
 const ImagePreview: React.FC<ImagePreviewProps> = ({
@@ -24,74 +25,94 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
   filters,
   isModalOpen,
   setIsModalOpen,
-  previewOnly = false
+  previewOnly = false,
+  maxPreviewWidth = 600 // Default maximum width for preview
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const modalCanvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Renderizar o canvas quando houver mudanças
-  useEffect(() => {
-    console.log("ImagePreview: Executando efeito de renderização");
-    console.log("ImageRef atual:", imageRef.current);
-    console.log("CanvasRef atual:", canvasRef.current);
-    
-    if (canvasRef.current && imageRef.current) {
-      console.log("Ambas as referências estão presentes, renderizando canvas");
-      console.log("Dimensões da imagem:", imageRef.current.width, "x", imageRef.current.height);
-      
+  // Função para renderizar o canvas com redimensionamento
+  const renderPreview = useCallback(() => {
+    if (canvasRef.current && imageRef.current && containerRef.current) {
       try {
+        const img = imageRef.current;
+        const canvas = canvasRef.current;
+        const containerWidth = containerRef.current.clientWidth;
+        
+        // Determine canvas width (limited by container or maxPreviewWidth)
+        const targetWidth = Math.min(containerWidth, maxPreviewWidth);
+        
+        // Calculate proportional height
+        const aspectRatio = img.height / img.width;
+        const targetHeight = targetWidth * aspectRatio;
+        
+        // Set canvas dimensions for preview
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        
         renderCanvas(
-          canvasRef.current,
-          imageRef.current,
+          canvas,
+          img,
           title,
           description,
           titleFormat,
           descFormat,
           filters
         );
-        console.log("Canvas renderizado com sucesso");
       } catch (error) {
         console.error("Erro ao renderizar canvas:", error);
       }
-    } else {
-      console.log("Não foi possível renderizar - falta referências");
     }
-  }, [imageRef.current, title, description, titleFormat, descFormat, filters]);
+  }, [imageRef, title, description, titleFormat, descFormat, filters, maxPreviewWidth]);
+
+  // Renderizar o canvas quando houver mudanças
+  useEffect(() => {
+    renderPreview();
+    
+    // Add listener to resize when window size changes
+    const handleResize = () => {
+      renderPreview();
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [renderPreview]);
 
   // Efeito para renderizar a imagem no modal quando aberto
   useEffect(() => {
-    if (isModalOpen && modalCanvasRef.current && canvasRef.current && imageRef.current) {
-      console.log("Modal aberto, renderizando canvas modal");
-      
+    if (isModalOpen && modalCanvasRef.current && imageRef.current) {
       const modalCanvas = modalCanvasRef.current;
-      const originalCanvas = canvasRef.current;
+      const img = imageRef.current;
       
-      modalCanvas.width = imageRef.current.width;
-      modalCanvas.height = imageRef.current.height;
+      // Use original image size for the modal
+      modalCanvas.width = img.width;
+      modalCanvas.height = img.height;
       
-      const ctx = modalCanvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(originalCanvas, 0, 0);
-        console.log("Canvas modal renderizado");
-      }
+      // Render the image at full size in the modal
+      renderCanvas(
+        modalCanvas,
+        img,
+        title,
+        description,
+        titleFormat,
+        descFormat,
+        filters
+      );
     }
-  }, [isModalOpen]);
-
-  const handleModalOpen = () => {
-    console.log("Abrindo modal");
-    setIsModalOpen(true);
-  };
+  }, [isModalOpen, imageRef, title, description, titleFormat, descFormat, filters]);
 
   return (
     <>
-      {/* Canvas de Pré-visualização */}
-      <div className="relative w-full">
+      {/* Container e Canvas de Pré-visualização */}
+      <div ref={containerRef} className="relative w-full">
         <canvas
           ref={canvasRef}
           className="w-full h-auto rounded-lg shadow-md cursor-pointer"
-          onClick={handleModalOpen}
+          onClick={() => setIsModalOpen(true)}
         />
-        
       </div>
 
       {/* Modal de visualização em tamanho maior */}
@@ -99,7 +120,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
         <DialogContent className="max-w-[90vw] max-h-[90vh] p-6">
           <canvas
             ref={modalCanvasRef}
-            className="max-w-full max-h-[80vh] h-auto rounded-lg mx-auto"
+            className="max-w-[50vh] max-h-[50vh] h-[50vh] w-[50vh] rounded-lg mx-auto"
           />
         </DialogContent>
       </Dialog>
