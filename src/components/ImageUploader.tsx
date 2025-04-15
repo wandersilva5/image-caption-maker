@@ -1,7 +1,9 @@
+
 import React, { useState, useRef, ChangeEvent } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Upload, Image as ImageIcon } from 'lucide-react';
 
 interface ImageUploaderProps {
@@ -48,7 +50,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelected }) => {
   };
 
   const processFile = (file: File) => {
-    // Validando se é uma imagem
+    // Validating if it's an image
     if (!file.type.match('image.*')) {
       alert('Por favor selecione uma imagem!');
       return;
@@ -70,8 +72,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelected }) => {
   };
 
   return (
-    <div 
-      className={`p-6 border-2 border-dashed ${isDragging ? 'border-primary bg-primary/5' : 'border-gray-300'} 
+    <Card 
+      className={`p-6 border-2 border-dashed ${isDragging ? 'border-brand bg-brand/5' : 'border-gray-300'} 
       rounded-lg cursor-pointer transition-all duration-200 animate-fade-in`}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -80,11 +82,11 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelected }) => {
       onClick={handleButtonClick}
     >
       <div className="flex flex-col items-center justify-center space-y-4">
-        <div className="p-4 bg-primary/10 rounded-full">
+        <div className="p-4 bg-brand/10 rounded-full">
           {isDragging ? (
-            <ImageIcon className="w-12 h-12 text-primary" />
+            <ImageIcon className="w-12 h-12 text-brand" />
           ) : (
-            <Upload className="w-12 h-12 text-primary" />
+            <Upload className="w-12 h-12 text-brand" />
           )}
         </div>
         <div className="text-center">
@@ -106,7 +108,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelected }) => {
           className="hidden"
         />
       </div>
-    </div>
+    </Card>
   );
 };
 
