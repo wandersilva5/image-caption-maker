@@ -4,6 +4,7 @@ import { TextFormatOptions, ImageFilters, defaultFormatOptions, defaultFilters }
 import { renderCanvas } from './CanvasRenderer';
 import TextInputPanel from './TextInputPanel';
 import FormatTabs from './FormatTabs';
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface ImageEditorProps {
   imageUrl: string | null;
@@ -152,7 +153,6 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
             <canvas
               ref={canvasRef}
               className="w-full h-auto rounded-lg shadow-md cursor-pointer"
-              onClick={handleModalOpen}
             />
 
           </div>          
@@ -200,7 +200,6 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
   );
 };
 
-// Importação do Dialog que estava faltando
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+
 
 export default ImageEditor;

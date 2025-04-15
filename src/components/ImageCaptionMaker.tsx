@@ -14,7 +14,7 @@ const ImageCaptionMaker: React.FC = () => {
   return (
     <div className="container mx-auto px-4 space-y-6">
       {/* Grid layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {/* Upload Section */}
         <Card>
           <CardHeader>
@@ -25,20 +25,6 @@ const ImageCaptionMaker: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Preview Section - Only show if image is available */}
-        {imageUrl && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Pré-visualização</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ImageEditor 
-                imageUrl={imageUrl}
-                previewOnly={true} 
-              />
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       {/* Editor Section - Only show if image is available */}
