@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Download, Eye, AlignCenter, AlignLeft, AlignRight, Type } from 'lucide-react';
+import { Download, Eye, AlignCenter, AlignLeft, AlignRight, ArrowUp, ArrowDown, AlignVerticalJustifyCenter } from 'lucide-react';
 import { 
   Select, 
   SelectContent, 
@@ -39,6 +39,9 @@ import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog"; /
 
 interface ImageEditorProps {
   imageUrl: string | null;
+  previewOnly?: boolean;
+  showControls?: boolean;
+  onOpenModal?: () => void;
 }
 
 interface TextFormatOptions {
@@ -49,6 +52,7 @@ interface TextFormatOptions {
   textAlign: 'left' | 'center' | 'right';
   shadowEnabled: boolean;
   fontFamily: string; // Nova propriedade
+  verticalPosition: 'top' | 'middle' | 'bottom';
 }
 
 interface ImageFilters {
@@ -65,6 +69,7 @@ const defaultFormatOptions: TextFormatOptions = {
   textAlign: 'center',
   shadowEnabled: true,
   fontFamily: 'Arial', // Nova propriedade
+  verticalPosition: 'bottom',
 };
 
 const defaultFilters: ImageFilters = {
@@ -73,7 +78,12 @@ const defaultFilters: ImageFilters = {
   saturation: 100,
 };
 
-const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
+const ImageEditor: React.FC<ImageEditorProps> = ({ 
+  imageUrl, 
+  previewOnly = false,
+  showControls = false,
+  onOpenModal 
+}) => {
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [isPreviewVisible, setIsPreviewVisible] = useState<boolean>(true);
@@ -81,8 +91,9 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
   const [descFormat, setDescFormat] = useState<TextFormatOptions>({...defaultFormatOptions, fontSize: 18});
   const [activeTab, setActiveTab] = useState<string>('title');
   const [filters, setFilters] = useState<ImageFilters>({ ...defaultFilters });
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false); // Estado para controlar a modal
-  const modalCanvasRef = useRef<HTMLCanvasElement>(null); // Referência para o canvas da modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
+  const modalCanvasRef = useRef<HTMLCanvasElement>(null);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
@@ -106,6 +117,22 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
       renderCanvas();
     }
   }, [title, description, titleFormat, descFormat, filters]);
+
+  // Efeito para renderizar a imagem na modal quando aberta
+  useEffect(() => {
+    if (isModalOpen && modalCanvasRef.current && previewCanvasRef.current) {
+      const modalCanvas = modalCanvasRef.current;
+      const previewCanvas = previewCanvasRef.current;
+      
+      modalCanvas.width = imageRef.current?.width || 800;
+      modalCanvas.height = imageRef.current?.height || 600;
+      
+      const ctx = modalCanvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(previewCanvas, 0, 0, modalCanvas.width, modalCanvas.height);
+      }
+    }
+  }, [isModalOpen]);
 
   const renderCanvas = () => {
     if (!canvasRef.current || !imageRef.current) return;
@@ -131,12 +158,28 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
     const minOverlayHeight = Math.min(canvas.height * 0.3, 200);
     const overlayHeight = Math.max(minOverlayHeight, descriptionHeight + 120); // Aumentado padding
   
+    // Função auxiliar para calcular posição Y
+    const getVerticalPosition = (position: string, overlayHeight: number) => {
+      switch (position) {
+        case 'top':
+          return overlayHeight;
+        case 'middle':
+          return canvas.height / 2;
+        case 'bottom':
+        default:
+          return canvas.height - overlayHeight;
+      }
+    };
+  
+    // Ajuste do overlay e textos
+    const yPosition = getVerticalPosition(titleFormat.verticalPosition, overlayHeight);
+  
     // Desenhar overlay com gradiente para melhor legibilidade
     const gradient = ctx.createLinearGradient(0, canvas.height - overlayHeight, 0, canvas.height);
     gradient.addColorStop(0, 'rgba(0, 0, 0, 0.7)');
     gradient.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, canvas.height - overlayHeight, canvas.width, overlayHeight);
+    ctx.fillRect(0, yPosition - overlayHeight, canvas.width, overlayHeight);
   
     // Desenhar título
     if (title) {
@@ -154,7 +197,8 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
         ctx.shadowOffsetY = 1;
       }
   
-      ctx.fillText(title, xPos, canvas.height - overlayHeight + 50);
+      const titleY = yPosition - overlayHeight + 50;
+      ctx.fillText(title, xPos, titleY);
       ctx.restore(); // Restaurar contexto
     }
   
@@ -172,14 +216,14 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
         ctx.shadowOffsetY = 1;
       }
   
-      let y = canvas.height - overlayHeight + (title ? 100 : 60);
+      let descY = yPosition - overlayHeight + (title ? 100 : 60);
       lines.forEach(line => {
         const xPos = getXPosition(canvas.width, descFormat.textAlign);
         if (line === '') {
-          y += lineHeightDesc * 0.5; // Espaço menor para linhas vazias
+          descY += lineHeightDesc * 0.5; // Espaço menor para linhas vazias
         } else {
-          ctx.fillText(line, xPos, y);
-          y += lineHeightDesc;
+          ctx.fillText(line, xPos, descY);
+          descY += lineHeightDesc;
         }
       });
       ctx.restore(); // Restaurar contexto
@@ -269,440 +313,620 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
   
+  const renderModalCanvas = () => {
+    if (!modalCanvasRef.current || !canvasRef.current) return;
+  
+    const modalCanvas = modalCanvasRef.current;
+    const originalCanvas = canvasRef.current;
+  
+    // Manter proporções originais
+    modalCanvas.width = originalCanvas.width;
+    modalCanvas.height = originalCanvas.height;
+  
+    const modalCtx = modalCanvas.getContext('2d');
+    if (!modalCtx) return;
+  
+    // Copiar conteúdo do canvas original
+    modalCtx.drawImage(originalCanvas, 0, 0);
+  };
+  
   const openModal = () => {
     setIsModalOpen(true);
-
-    // Renderizar o canvas na modal
-    if (modalCanvasRef.current && canvasRef.current) {
-      const modalCanvas = modalCanvasRef.current;
-      const originalCanvas = canvasRef.current;
-
-      modalCanvas.width = originalCanvas.width;
-      modalCanvas.height = originalCanvas.height;
-
-      const modalCtx = modalCanvas.getContext('2d');
-      const originalCtx = originalCanvas.getContext('2d');
-
-      if (modalCtx && originalCtx) {
-        modalCtx.drawImage(originalCanvas, 0, 0);
+  };
+  
+  const closeModal = () => setIsModalOpen(false);
+  
+  const handleModalOpen = () => {
+    setIsModalOpen(true);
+    // Garante que a modal será renderizada com o conteúdo atualizado
+    setTimeout(() => {
+      if (modalCanvasRef.current && canvasRef.current) {
+        const modalCtx = modalCanvasRef.current.getContext('2d');
+        if (modalCtx) {
+          modalCanvasRef.current.width = canvasRef.current.width;
+          modalCanvasRef.current.height = canvasRef.current.height;
+          modalCtx.drawImage(canvasRef.current, 0, 0);
+        }
       }
+    }, 0);
+  };
+
+  const handlePreviewClick = () => {
+    if (onOpenModal) {
+      onOpenModal();
+    } else {
+      setIsModalOpen(true);
     }
   };
 
-  const closeModal = () => setIsModalOpen(false);
-  
   // Determine the current format object based on active tab
   const currentFormat = activeTab === 'title' ? titleFormat : descFormat;
   const updateCurrentFormat = activeTab === 'title' ? updateTitleFormat : updateDescFormat;
 
   return (
-    <div className="space-y-3 animate-fade-in">
-      {imageUrl ? (
+    <div className="space-y-4">
+      {imageUrl && (
         <>
-          <div className="flex flex-wrap gap-4">
-            {/* Pré-visualização no lado esquerdo */}
-            {isPreviewVisible && (
-              <div className="flex-1 min-w-[300px] max-w-[400px]">
-                <h3 className="text-md font-medium mb-2">Pré-visualização</h3>
-                <div className="border rounded-md p-2 flex justify-center bg-gray-50">
-                  <div className="relative max-w-full">
-                    <canvas
-                      ref={canvasRef}
-                      className="max-w-full h-auto rounded-md shadow-md cursor-pointer"
-                      style={{ maxHeight: "250px" }}
-                      onClick={openModal} // Abre a modal ao clicar na imagem
-                    ></canvas>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-500 mt-2 text-center">
-                  Clique na imagem para ampliar
-                </p>
-              </div>
+          {/* Canvas de Pré-visualização */}
+          <div className="relative w-full">
+            <canvas
+              ref={canvasRef}
+              className="w-full h-auto rounded-lg shadow-md cursor-pointer"
+              onClick={handlePreviewClick}
+            />
+            {previewOnly && (
+              <p className="text-sm text-gray-500 mt-2 text-center">
+                Clique na imagem para ampliar
+              </p>
             )}
-
-            {/* Campos de entrada no lado direito */}
-            <div className="flex-1 min-w-[300px]">
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Título</Label>
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Adicione um título"
-                    className="w-full"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="description">Descrição</Label>
-                  <Textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Adicione uma descrição"
-                    className="w-full min-h-[80px]"
-                  />
-                </div>
-                
-                <Card className="mt-3">
-                  <CardContent className="p-3">
-                    <Tabs defaultValue="title" onValueChange={setActiveTab}>
-                      <TabsList className="w-full mb-3">
-                        <TabsTrigger value="title" className="flex-1">Formatar Título</TabsTrigger>
-                        <TabsTrigger value="description" className="flex-1">Formatar Descrição</TabsTrigger>
-                        <TabsTrigger value="filters" className="flex-1">Filtros de Imagem</TabsTrigger>
-                      </TabsList>
-                      
-                      <TabsContent value="title" className="space-y-3">
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <Label>Tamanho da fonte</Label>
-                            <span className="text-sm text-gray-500">{titleFormat.fontSize}px</span>
-                          </div>
-                          <Slider
-                            defaultValue={[titleFormat.fontSize]}
-                            min={16}
-                            max={72}
-                            step={1}
-                            value={[titleFormat.fontSize]}
-                            onValueChange={(values) => updateTitleFormat('fontSize', values[0])}
-                          />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <Label>Cor do texto</Label>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="w-8 h-8 rounded border"
-                                style={{ backgroundColor: titleFormat.textColor }}
-                              />
-                              <Input
-                                type="color"
-                                value={titleFormat.textColor}
-                                onChange={(e) => updateTitleFormat('textColor', e.target.value)}
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <Label>Sombra</Label>
-                              <Input
-                                type="checkbox"
-                                className="w-4 h-4"
-                                checked={titleFormat.shadowEnabled}
-                                onChange={(e) => updateTitleFormat('shadowEnabled', e.target.checked)}
-                              />
-                            </div>
-                            {titleFormat.shadowEnabled && (
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-8 h-8 rounded border"
-                                  style={{ backgroundColor: titleFormat.shadowColor }}
-                                />
-                                <Input
-                                  type="color"
-                                  value={titleFormat.shadowColor}
-                                  onChange={(e) => updateTitleFormat('shadowColor', e.target.value)}
-                                  disabled={!titleFormat.shadowEnabled}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <Label>Alinhamento</Label>
-                          <ToggleGroup
-                            type="single"
-                            value={titleFormat.textAlign}
-                            onValueChange={(value) => {
-                              if (value) updateTitleFormat('textAlign', value as 'left' | 'center' | 'right');
-                            }}
-                            className="justify-start"
-                          >
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <ToggleGroupItem value="left" aria-label="Align left">
-                                    <AlignLeft className="h-4 w-4" />
-                                  </ToggleGroupItem>
-                                </TooltipTrigger>
-                                <TooltipContent>Alinhar à Esquerda</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <ToggleGroupItem value="center" aria-label="Align center">
-                                    <AlignCenter className="h-4 w-4" />
-                                  </ToggleGroupItem>
-                                </TooltipTrigger>
-                                <TooltipContent>Centralizar</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <ToggleGroupItem value="right" aria-label="Align right">
-                                    <AlignRight className="h-4 w-4" />
-                                  </ToggleGroupItem>
-                                </TooltipTrigger>
-                                <TooltipContent>Alinhar à Direita</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </ToggleGroup>
-                        </div>
-                        
-                        {titleFormat.shadowEnabled && (
-                          <div className="space-y-1">
-                            <div className="flex justify-between items-center">
-                              <Label>Intensidade da sombra</Label>
-                              <span className="text-sm text-gray-500">{titleFormat.shadowBlur}px</span>
-                            </div>
-                            <Slider
-                              defaultValue={[titleFormat.shadowBlur]}
-                              min={0}
-                              max={20}
-                              step={1}
-                              value={[titleFormat.shadowBlur]}
-                              onValueChange={(values) => updateTitleFormat('shadowBlur', values[0])}
-                              disabled={!titleFormat.shadowEnabled}
-                            />
-                          </div>
-                        )}
-                      </TabsContent>
-                      
-                      <TabsContent value="description" className="space-y-3">
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <Label>Tamanho da fonte</Label>
-                            <span className="text-sm text-gray-500">{descFormat.fontSize}px</span>
-                          </div>
-                          <Slider
-                            defaultValue={[descFormat.fontSize]}
-                            min={12}
-                            max={48}
-                            step={1}
-                            value={[descFormat.fontSize]}
-                            onValueChange={(values) => updateDescFormat('fontSize', values[0])}
-                          />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <Label>Cor do texto</Label>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="w-8 h-8 rounded border"
-                                style={{ backgroundColor: descFormat.textColor }}
-                              />
-                              <Input
-                                type="color"
-                                value={descFormat.textColor}
-                                onChange={(e) => updateDescFormat('textColor', e.target.value)}
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <Label>Sombra</Label>
-                              <Input
-                                type="checkbox"
-                                className="w-4 h-4"
-                                checked={descFormat.shadowEnabled}
-                                onChange={(e) => updateDescFormat('shadowEnabled', e.target.checked)}
-                              />
-                            </div>
-                            {descFormat.shadowEnabled && (
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-8 h-8 rounded border"
-                                  style={{ backgroundColor: descFormat.shadowColor }}
-                                />
-                                <Input
-                                  type="color"
-                                  value={descFormat.shadowColor}
-                                  onChange={(e) => updateDescFormat('shadowColor', e.target.value)}
-                                  disabled={!descFormat.shadowEnabled}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <Label>Alinhamento</Label>
-                          <ToggleGroup
-                            type="single"
-                            value={descFormat.textAlign}
-                            onValueChange={(value) => {
-                              if (value) updateDescFormat('textAlign', value as 'left' | 'center' | 'right');
-                            }}
-                            className="justify-start"
-                          >
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <ToggleGroupItem value="left" aria-label="Align left">
-                                    <AlignLeft className="h-4 w-4" />
-                                  </ToggleGroupItem>
-                                </TooltipTrigger>
-                                <TooltipContent>Alinhar à Esquerda</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <ToggleGroupItem value="center" aria-label="Align center">
-                                    <AlignCenter className="h-4 w-4" />
-                                  </ToggleGroupItem>
-                                </TooltipTrigger>
-                                <TooltipContent>Centralizar</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <ToggleGroupItem value="right" aria-label="Align right">
-                                    <AlignRight className="h-4 w-4" />
-                                  </ToggleGroupItem>
-                                </TooltipTrigger>
-                                <TooltipContent>Alinhar à Direita</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </ToggleGroup>
-                        </div>
-                        
-                        {descFormat.shadowEnabled && (
-                          <div className="space-y-1">
-                            <div className="flex justify-between items-center">
-                              <Label>Intensidade da sombra</Label>
-                              <span className="text-sm text-gray-500">{descFormat.shadowBlur}px</span>
-                            </div>
-                            <Slider
-                              defaultValue={[descFormat.shadowBlur]}
-                              min={0}
-                              max={20}
-                              step={1}
-                              value={[descFormat.shadowBlur]}
-                              onValueChange={(values) => updateDescFormat('shadowBlur', values[0])}
-                              disabled={!descFormat.shadowEnabled}
-                            />
-                          </div>
-                        )}
-                      </TabsContent>
-
-                      <TabsContent value="filters" className="space-y-3">
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <Label>Brilho</Label>
-                            <span className="text-sm text-gray-500">{filters.brightness}%</span>
-                          </div>
-                          <Slider
-                            defaultValue={[filters.brightness]}
-                            min={0}
-                            max={200}
-                            step={1}
-                            value={[filters.brightness]}
-                            onValueChange={(values) => updateFilter('brightness', values[0])}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <Label>Contraste</Label>
-                            <span className="text-sm text-gray-500">{filters.contrast}%</span>
-                          </div>
-                          <Slider
-                            defaultValue={[filters.contrast]}
-                            min={0}
-                            max={200}
-                            step={1}
-                            value={[filters.contrast]}
-                            onValueChange={(values) => updateFilter('contrast', values[0])}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <Label>Saturação</Label>
-                            <span className="text-sm text-gray-500">{filters.saturation}%</span>
-                          </div>
-                          <Slider
-                            defaultValue={[filters.saturation]}
-                            min={0}
-                            max={200}
-                            step={1}
-                            value={[filters.saturation]}
-                            onValueChange={(values) => updateFilter('saturation', values[0])}
-                          />
-                        </div>
-                      </TabsContent>
-                    </Tabs>
-                  </CardContent>
-                </Card>
-                
-                <div className="flex gap-2 mt-3">
-                  <Button 
-                    onClick={handleDownload} 
-                    className="flex-1 bg-brand hover:bg-brand-dark"
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Baixar Imagem
-                  </Button>
-                  
-                  <Button 
-                    onClick={togglePreview}
-                    variant="outline"
-                    className="w-auto"
-                  >
-                    <Eye className="mr-2 h-4 w-4" />
-                    {isPreviewVisible ? "Ocultar Prévia" : "Mostrar Prévia"}
-                  </Button>
-                </div>
-              </div>
-            </div>
           </div>
 
-          {/* Modal para exibir a imagem em tamanho maior */}
-          {isModalOpen && (
-            <Dialog open={isModalOpen} onOpenChange={closeModal}>
-              <DialogOverlay
-                className="fixed inset-0 bg-black/70 z-50"
-                onClick={closeModal} // Fecha a modal ao clicar fora
-              />
-              <DialogContent
-                className="fixed inset-0 flex items-center justify-center z-50"
-                onKeyDown={(e) => e.key === "Escape" && closeModal()} // Fecha a modal ao pressionar Esc
-              >
-                <div className="relative bg-white rounded-md shadow-lg p-4 max-w-full max-h-full">
-                  <canvas
-                    ref={modalCanvasRef} // Canvas da modal
-                    className="w-auto h-auto max-w-full max-h-screen rounded-md"
-                  ></canvas>
-                  <button
-                    onClick={closeModal}
-                    className="absolute top-2 right-2 bg-gray-200 hover:bg-gray-300 rounded-full p-2"
-                  >
-                    ✕
-                  </button>
-                </div>
+          {/* Modal (apenas se não for previewOnly) */}
+          {!previewOnly && isModalOpen && (
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+              <DialogContent className="max-w-[90vw] max-h-[90vh] p-6">
+                <canvas
+                  ref={modalCanvasRef}
+                  className="w-full h-auto rounded-lg"
+                />
+                <Button
+                  className="absolute top-2 right-2"
+                  variant="ghost"
+                  onClick={() => setIsModalOpen(false)}
+                >
+                  ✕
+                </Button>
               </DialogContent>
             </Dialog>
           )}
+
+          {/* Controles de edição */}
+          {showControls && (
+            <div className="space-y-4">
+              {/* Área de Preview */}
+              <div className="relative w-full">
+                <canvas
+                  ref={canvasRef}
+                  className="w-full h-auto rounded-lg shadow-md cursor-pointer"
+                  onClick={handleModalOpen}
+                />
+              </div>
+
+              {/* Modal */}
+              <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent className="sm:max-w-[90%] p-0">
+                  <div className="relative bg-background rounded-lg">
+                    <div className="max-h-[90vh] overflow-auto p-1">
+                      <canvas
+                        ref={modalCanvasRef}
+                        className="w-full h-auto rounded-lg"
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      className="absolute top-2 right-2 rounded-full w-8 h-8 p-0"
+                      onClick={() => setIsModalOpen(false)}
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {/* Controles de edição (só mostrar se não for preview) */}
+              {!previewOnly && (
+                <div className="space-y-4">
+                  {imageUrl ? (
+                    <>
+                      {/* Preview Canvas */}
+                      <div className="relative">
+                        <canvas
+                          ref={canvasRef}
+                          className="max-w-full h-auto rounded-md shadow-md cursor-pointer"
+                          onClick={openModal}
+                        />
+                        <p className="text-sm text-gray-500 mt-2 text-center">
+                          Clique na imagem para ampliar
+                        </p>
+                      </div>
+
+                      {/* Modal */}
+                      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 border-0 bg-transparent">
+                          <div className="relative w-full h-full flex items-center justify-center">
+                            <canvas
+                              ref={modalCanvasRef}
+                              style={{
+                                maxWidth: '100%',
+                                maxHeight: '90vh',
+                                objectFit: 'contain'
+                              }}
+                              className="rounded-lg shadow-2xl"
+                            />
+                            <button
+                              onClick={() => setIsModalOpen(false)}
+                              className="absolute top-2 right-2 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </DialogContent>
+                        <DialogOverlay className="bg-black/80" />
+                      </Dialog>
+
+                      {/* Rest of configuration UI */}
+                      <div className="flex flex-wrap gap-4">
+                        {/* Pré-visualização no lado esquerdo */}
+                        {isPreviewVisible && (
+                          <div className="flex-1 min-w-[300px] max-w-[400px]">
+                            <h3 className="text-md font-medium mb-2">Pré-visualização</h3>
+                            <div className="border rounded-md p-2 flex justify-center bg-gray-50">
+                              <div className="relative max-w-full">
+                                <canvas
+                                  ref={previewCanvasRef}
+                                  className="max-w-full h-auto rounded-md shadow-md cursor-pointer"
+                                  style={{ maxHeight: "250px" }}
+                                  onClick={openModal} // Abre a modal ao clicar na imagem
+                                ></canvas>
+                              </div>
+                            </div>
+                            <p className="text-sm text-gray-500 mt-2 text-center">
+                              Clique na imagem para ampliar
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Campos de entrada no lado direito */}
+                        <div className="flex-1 min-w-[300px]">
+                          <div className="space-y-3">
+                            <div className="space-y-2">
+                              <Label htmlFor="title">Título</Label>
+                              <Input
+                                id="title"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                placeholder="Adicione um título"
+                                className="w-full"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label htmlFor="description">Descrição</Label>
+                              <Textarea
+                                id="description"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Adicione uma descrição"
+                                className="w-full min-h-[80px]"
+                              />
+                            </div>
+                            
+                            <Card className="mt-3">
+                              <CardContent className="p-3">
+                                <Tabs defaultValue="title" onValueChange={setActiveTab}>
+                                  <TabsList className="w-full mb-3">
+                                    <TabsTrigger value="title" className="flex-1">Formatar Título</TabsTrigger>
+                                    <TabsTrigger value="description" className="flex-1">Formatar Descrição</TabsTrigger>
+                                    <TabsTrigger value="filters" className="flex-1">Filtros de Imagem</TabsTrigger>
+                                  </TabsList>
+                                  
+                                  <TabsContent value="title" className="space-y-3">
+                                    <div className="space-y-2">
+                                      <div className="flex justify-between items-center">
+                                        <Label>Tamanho da fonte</Label>
+                                        <span className="text-sm text-gray-500">{titleFormat.fontSize}px</span>
+                                      </div>
+                                      <Slider
+                                        defaultValue={[titleFormat.fontSize]}
+                                        min={16}
+                                        max={72}
+                                        step={1}
+                                        value={[titleFormat.fontSize]}
+                                        onValueChange={(values) => updateTitleFormat('fontSize', values[0])}
+                                      />
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-3 gap-3">
+                                      {/* Primeira coluna: Cor do texto */}
+                                      <div className="space-y-1">
+                                        <Label>Cor do texto</Label>
+                                        <div className="flex items-center gap-2">
+                                          <div
+                                            className="w-8 h-8 rounded border"
+                                            style={{ backgroundColor: titleFormat.textColor }}
+                                          />
+                                          <Input
+                                            type="color"
+                                            value={titleFormat.textColor}
+                                            onChange={(e) => updateTitleFormat('textColor', e.target.value)}
+                                          />
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Segunda coluna: Sombra e cor da sombra */}
+                                      <div className="space-y-1">
+                                        <div className="flex items-center justify-between">
+                                          <Label>Sombra</Label>
+                                          <Input
+                                            type="checkbox"
+                                            className="w-4 h-4"
+                                            checked={titleFormat.shadowEnabled}
+                                            onChange={(e) => updateTitleFormat('shadowEnabled', e.target.checked)}
+                                          />
+                                        </div>
+                                        {titleFormat.shadowEnabled && (
+                                          <div className="flex items-center gap-2">
+                                            <div
+                                              className="w-8 h-8 rounded border"
+                                              style={{ backgroundColor: titleFormat.shadowColor }}
+                                            />
+                                            <Input
+                                              type="color"
+                                              value={titleFormat.shadowColor}
+                                              onChange={(e) => updateTitleFormat('shadowColor', e.target.value)}
+                                              disabled={!titleFormat.shadowEnabled}
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
+                                      
+                                      {/* Terceira coluna: Intensidade da sombra */}
+                                      {titleFormat.shadowEnabled && (
+                                        <div className="space-y-1">
+                                          <Label>Intensidade</Label>
+                                          <Slider
+                                            defaultValue={[titleFormat.shadowBlur]}
+                                            min={0}
+                                            max={20}
+                                            step={1}
+                                            value={[titleFormat.shadowBlur]}
+                                            onValueChange={(values) => updateTitleFormat('shadowBlur', values[0])}
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-3">
+                                      {/* Primeira coluna: Alinhamento horizontal */}
+                                      <div className="space-y-1">
+                                        <Label>Alinhamento</Label>
+                                        <ToggleGroup
+                                          type="single"
+                                          value={titleFormat.textAlign}
+                                          onValueChange={(value) => {
+                                            if (value) updateTitleFormat('textAlign', value as 'left' | 'center' | 'right');
+                                          }}
+                                          className="justify-start"
+                                        >
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <ToggleGroupItem value="left" aria-label="Align left">
+                                                  <AlignLeft className="h-4 w-4" />
+                                                </ToggleGroupItem>
+                                              </TooltipTrigger>
+                                              <TooltipContent>Alinhar à Esquerda</TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                          
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <ToggleGroupItem value="center" aria-label="Align center">
+                                                  <AlignCenter className="h-4 w-4" />
+                                                </ToggleGroupItem>
+                                              </TooltipTrigger>
+                                              <TooltipContent>Centralizar</TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                          
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <ToggleGroupItem value="right" aria-label="Align right">
+                                                  <AlignRight className="h-4 w-4" />
+                                                </ToggleGroupItem>
+                                              </TooltipTrigger>
+                                              <TooltipContent>Alinhar à Direita</TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        </ToggleGroup>
+                                      </div>
+                                      
+                                      {/* Segunda coluna: Posição vertical */}
+                                      <div className="space-y-1">
+                                        <Label>Posição Vertical</Label>
+                                        <ToggleGroup
+                                          type="single"
+                                          value={titleFormat.verticalPosition}
+                                          onValueChange={(value) => {
+                                            if (value) updateTitleFormat('verticalPosition', value as 'top' | 'middle' | 'bottom');
+                                          }}
+                                          className="justify-start"
+                                        >
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <ToggleGroupItem value="top">
+                                                  <ArrowUp className="h-4 w-4" />
+                                                </ToggleGroupItem>
+                                              </TooltipTrigger>
+                                              <TooltipContent>Topo</TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                          
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <ToggleGroupItem value="middle">
+                                                  <AlignVerticalJustifyCenter className="h-4 w-4" />
+                                                </ToggleGroupItem>
+                                              </TooltipTrigger>
+                                              <TooltipContent>Meio</TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                          
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <ToggleGroupItem value="bottom">
+                                                  <ArrowDown className="h-4 w-4" />
+                                                </ToggleGroupItem>
+                                              </TooltipTrigger>
+                                              <TooltipContent>Rodapé</TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        </ToggleGroup>
+                                      </div>
+                                    </div>
+                                  </TabsContent>
+                                  
+                                  <TabsContent value="description" className="space-y-3">
+                                    <div className="space-y-2">
+                                      <div className="flex justify-between items-center">
+                                        <Label>Tamanho da fonte</Label>
+                                        <span className="text-sm text-gray-500">{descFormat.fontSize}px</span>
+                                      </div>
+                                      <Slider
+                                        defaultValue={[descFormat.fontSize]}
+                                        min={12}
+                                        max={48}
+                                        step={1}
+                                        value={[descFormat.fontSize]}
+                                        onValueChange={(values) => updateDescFormat('fontSize', values[0])}
+                                      />
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <div className="space-y-1">
+                                        <Label>Cor do texto</Label>
+                                        <div className="flex items-center gap-2">
+                                          <div
+                                            className="w-8 h-8 rounded border"
+                                            style={{ backgroundColor: descFormat.textColor }}
+                                          />
+                                          <Input
+                                            type="color"
+                                            value={descFormat.textColor}
+                                            onChange={(e) => updateDescFormat('textColor', e.target.value)}
+                                          />
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="space-y-1">
+                                        <div className="flex items-center justify-between">
+                                          <Label>Sombra</Label>
+                                          <Input
+                                            type="checkbox"
+                                            className="w-4 h-4"
+                                            checked={descFormat.shadowEnabled}
+                                            onChange={(e) => updateDescFormat('shadowEnabled', e.target.checked)}
+                                          />
+                                        </div>
+                                        {descFormat.shadowEnabled && (
+                                          <div className="flex items-center gap-2">
+                                            <div
+                                              className="w-8 h-8 rounded border"
+                                              style={{ backgroundColor: descFormat.shadowColor }}
+                                            />
+                                            <Input
+                                              type="color"
+                                              value={descFormat.shadowColor}
+                                              onChange={(e) => updateDescFormat('shadowColor', e.target.value)}
+                                              disabled={!descFormat.shadowEnabled}
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="space-y-1">
+                                      <Label>Alinhamento</Label>
+                                      <ToggleGroup
+                                        type="single"
+                                        value={descFormat.textAlign}
+                                        onValueChange={(value) => {
+                                          if (value) updateDescFormat('textAlign', value as 'left' | 'center' | 'right');
+                                        }}
+                                        className="justify-start"
+                                      >
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <ToggleGroupItem value="left" aria-label="Align left">
+                                                <AlignLeft className="h-4 w-4" />
+                                              </ToggleGroupItem>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Alinhar à Esquerda</TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                        
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <ToggleGroupItem value="center" aria-label="Align center">
+                                                <AlignCenter className="h-4 w-4" />
+                                              </ToggleGroupItem>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Centralizar</TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                        
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <ToggleGroupItem value="right" aria-label="Align right">
+                                                <AlignRight className="h-4 w-4" />
+                                              </ToggleGroupItem>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Alinhar à Direita</TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      </ToggleGroup>
+                                    </div>
+                                    
+                                    {descFormat.shadowEnabled && (
+                                      <div className="space-y-1">
+                                        <div className="flex justify-between items-center">
+                                          <Label>Intensidade da sombra</Label>
+                                          <span className="text-sm text-gray-500">{descFormat.shadowBlur}px</span>
+                                        </div>
+                                        <Slider
+                                          defaultValue={[descFormat.shadowBlur]}
+                                          min={0}
+                                          max={20}
+                                          step={1}
+                                          value={[descFormat.shadowBlur]}
+                                          onValueChange={(values) => updateDescFormat('shadowBlur', values[0])}
+                                          disabled={!descFormat.shadowEnabled}
+                                        />
+                                      </div>
+                                    )}
+                                  </TabsContent>
+
+                                  <TabsContent value="filters" className="space-y-3">
+                                    <div className="space-y-2">
+                                      <div className="flex justify-between items-center">
+                                        <Label>Brilho</Label>
+                                        <span className="text-sm text-gray-500">{filters.brightness}%</span>
+                                      </div>
+                                      <Slider
+                                        defaultValue={[filters.brightness]}
+                                        min={0}
+                                        max={200}
+                                        step={1}
+                                        value={[filters.brightness]}
+                                        onValueChange={(values) => updateFilter('brightness', values[0])}
+                                      />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <div className="flex justify-between items-center">
+                                        <Label>Contraste</Label>
+                                        <span className="text-sm text-gray-500">{filters.contrast}%</span>
+                                      </div>
+                                      <Slider
+                                        defaultValue={[filters.contrast]}
+                                        min={0}
+                                        max={200}
+                                        step={1}
+                                        value={[filters.contrast]}
+                                        onValueChange={(values) => updateFilter('contrast', values[0])}
+                                      />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <div className="flex justify-between items-center">
+                                        <Label>Saturação</Label>
+                                        <span className="text-sm text-gray-500">{filters.saturation}%</span>
+                                      </div>
+                                      <Slider
+                                        defaultValue={[filters.saturation]}
+                                        min={0}
+                                        max={200}
+                                        step={1}
+                                        value={[filters.saturation]}
+                                        onValueChange={(values) => updateFilter('saturation', values[0])}
+                                      />
+                                    </div>
+                                  </TabsContent>
+                                </Tabs>
+                              </CardContent>
+                            </Card>
+                            
+                            <div className="flex gap-2 mt-3">
+                              <Button 
+                                onClick={handleDownload} 
+                                className="flex-1 bg-brand hover:bg-brand-dark"
+                              >
+                                <Download className="mr-2 h-4 w-4" />
+                                Baixar Imagem
+                              </Button>
+                              
+                              <Button 
+                                onClick={togglePreview}
+                                variant="outline"
+                                className="w-auto"
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                {isPreviewVisible ? "Ocultar Prévia" : "Mostrar Prévia"}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Modal para exibir a imagem em tamanho maior */}
+                      {isModalOpen && (
+                        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                          <DialogOverlay className="fixed inset-0 bg-black/70 z-50" />
+                          <DialogContent className="fixed inset-0 flex items-center justify-center z-50 p-4">
+                            <div className="relative bg-white rounded-lg shadow-lg overflow-hidden max-w-[90vw] max-h-[90vh]">
+                              <canvas
+                                ref={modalCanvasRef}
+                                className="w-auto h-auto object-contain"
+                              />
+                              <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center p-6 text-gray-500">
+                      Selecione uma imagem para começar a editar
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </>
-      ) : (
-        <div className="text-center p-6 text-gray-500">
-          Selecione uma imagem para começar a editar
-        </div>
       )}
     </div>
   );
