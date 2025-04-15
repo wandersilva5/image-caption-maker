@@ -92,11 +92,6 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
           onClick={handleModalOpen}
         />
         
-        {previewOnly && (
-          <p className="text-sm text-gray-500 mt-2 text-center">
-            Clique na imagem para ampliar
-          </p>
-        )}
       </div>
 
       {/* Modal de visualização em tamanho maior */}
