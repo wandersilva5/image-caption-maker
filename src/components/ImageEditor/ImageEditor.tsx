@@ -148,20 +148,19 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
     <div className="space-y-4">
       {imageLoaded && imageRef.current ? (
         <>
-          {/* Canvas de Pré-visualização */}
+          {/* Controles de edição */}
+          {showControls && (
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Canvas de Pré-visualização */}
           <div className="relative w-full">
             <canvas
               ref={canvasRef}
               className="w-full h-auto rounded-lg shadow-md cursor-pointer"
             />
 
-          </div>          
-
-          {/* Controles de edição */}
-          {showControls && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          </div>  
               {/* Painel de entrada de texto - 1ª coluna no desktop */}
-              <div className="lg:col-span-1">
+              <div className="lg:col-span-2">
                 <TextInputPanel 
                   title={title}
                   description={description}
@@ -176,7 +175,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
               </div>
 
               {/* Abas de formatação - 2ª e 3ª colunas no desktop */}
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-3">
                 <FormatTabs
                   titleFormat={titleFormat}
                   descFormat={descFormat}
